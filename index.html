@@ -1,0 +1,317 @@
+<html>
+<head>
+	<title>Happy Birthday Sarah!</title>
+	<style>
+		.title {
+			font-family: sans-serif;
+			font-size: 0em;
+			font-style: italic;
+			color: #364561;
+			width: 200px;
+			height: 100px;
+		}
+		body {
+			background: url(bgradial.png) no-repeat;
+			background-attachment: fixed;
+			background-position: center;
+			background-color: #9cc0ff;
+		}
+		.greeting {
+			font-family: futura, sans-serif;
+			font-size: 5em;
+			font-weight: bold;
+			color: #ffffff;
+		}
+		
+		.love {
+			font-family: futura, sans-serif;
+		}
+		
+		.blackBorder {
+			border: 1px solid black;
+		}
+		
+		#iemsg {
+			position:absolute;
+			width:400px;
+			height: 100px;
+			border: 1px solid black;
+			padding: 10px;
+			background-color: white;
+		}
+		
+		#iemsg h2 {
+			font-family: futura, sans-serif;
+			margin: 0;
+			padding: 0;
+			padding-bottom: 4px;
+			font-size: 1.2em;
+			color: #364561;
+		}
+	</style>
+	
+	<script src="http://maps.google.com/maps?file=api&amp;v=2&amp;sensor=false&amp;key=ABQIAAAAqPHl4weQx6gSKVl_KZ3YKxSaUMObGpbYQ_kKgPgTNRSJ205IABSM_LKMsuunCCilBWJAUjFXLjrfOg" type="text/javascript"></script>
+	<script type="text/javascript" src="snow.js"></script>
+	<script type="text/javascript" src="jquery.js"></script>
+	<script type="text/javascript" src="jquery-fonteffect-1.0.0.min.js"></script>
+	<script type="text/javascript" src="konami.js"></script>
+	<script type="text/javascript" src="presents.js"></script>
+	<script type="text/javascript">
+	
+	
+		var _viewer = null;
+		var _greeting = null;
+		var _elephant = null;
+		var _awyeah = null;
+		var _love = null;
+		var _currentPresent = null;
+								
+		// center an object in the window
+		// useCss: if true, uses the css defined on the object, otherwise
+		// uses the current physical size of the object						
+		jQuery.fn.center = function(useCss) {
+			var obj = this;
+			
+			var height = useCss ? parseInt(obj.css('height')) : obj.height();
+			var width = useCss ? parseInt(obj.css('width')) : obj.width();
+			
+			if(isNaN(height)) {
+				height = 0;
+			}
+			if(isNaN(width)) {
+				width = 0;
+			}
+			
+			obj.css('top', $(window).height() / 2 - height / 2);
+			obj.css('left', $(window).width() / 2 - width / 2)
+
+			return this;
+		}
+		
+		function ShowGreeting(millis) {
+			millis = millis ? millis : 1000;
+			
+			_elephant.fadeIn(millis);
+			_greeting.fadeIn(millis);
+		}
+		
+		function HideGreeting(millis) {
+			millis = millis ? millis : 1000;
+			
+			// if they are fading in, they need to stop
+			// because a present wants to load
+			_elephant.stop();
+			_greeting.stop();
+			
+			_elephant.fadeOut(millis);
+			_greeting.fadeOut(millis);
+			_awyeah.fadeOut(millis);
+		}
+		
+		function OnKonamiCode() {
+			_currentPresent = null;
+			
+			_viewer.html(YoutubeString("IdZE59eJdEw"));
+			_viewer.center();
+			
+			HideGreeting();
+			
+			_viewer.fadeIn("slow");
+		}
+		
+		function LoadViewer(present) {
+			_currentPresent = present;
+			
+			var p = presents[present.pindex];
+
+			_viewer.html(p.payload);
+			_viewer.center();
+			HideGreeting();
+			
+			if(p.callback) {
+				p.callback();
+			}
+		
+			_viewer.fadeIn("slow");
+		}
+		
+		function Random(max) {
+			return Math.floor(Math.random() * max)
+		}
+			
+		// Shuffles the presents on load/refresh
+		// so they show up at different locations each time
+		function ShufflePresents() {			
+			var p = [];
+			p.length = presents.length;
+			
+			while(presents.length > 0) {
+				var index;
+				do {
+					index = Random(p.length);
+				} while(p[index]);
+				
+				p[index] = presents.pop();
+			}
+			
+			presents = p;
+		}	
+				
+		function InitPresents() {
+			ShufflePresents();
+			
+			var radians = 2 * Math.PI / presents.length;
+			var radiusX = $(window).width() / 2 - 200;
+			var radiusY = $(window).height() / 2 - 100;
+			
+			for(var i = 0; i < presents.length; ++i) {
+				var title = presents[i].title;
+				var titleDiv = $("<div class='title' style='display:none;position:absolute;cursor:pointer'/>").append(title);
+				// unwrap the jquery list and stick an index onto the actual div object, to be used later
+				titleDiv[0].pindex = i;
+				
+				if(presents[i].id) {
+					// give the div an HTML id, so other code can find this div with $("#[id]")
+					titleDiv[0].id = presents[i].id;
+				}
+				
+				if(presents[i].callback) {
+					titleDiv[0].callback = presents[i].callback;
+				}	
+				
+				titleDiv.click(function() {
+					if(_currentPresent == this) {
+						// clicked on a present while its already open, so close it
+						_viewer.fadeOut("slow");
+						ShowGreeting();
+						_currentPresent = null;
+					} else {
+						LoadViewer(this);
+					}
+				});
+				
+				// start the titles in the center, so they can shoot out radially below
+				titleDiv.center();
+				
+				$(document.body).append(titleDiv);
+				
+				var dx = Math.cos(radians * i) * radiusX;
+				var dy = Math.sin(radians * i) * radiusY;
+				
+				if(jQuery.browser.msie) {
+					// if dx or dy are too small in IE, it will lead to an invalid argument
+					if(dx > 0 && dx < 0.01) {
+						dx = 0;
+					}
+					if(dy > 0 && dy < 0.01) {
+						dy = 0;
+					}
+				}
+				
+				titleDiv.animate({ left: "+=" + dx + "px", top: "+=" + dy + "px", opacity: "toggle", fontSize: "+=1.0em"}, 2400);
+			}
+		}
+		
+		function InitViewer() {
+			_viewer = $("<div class='viewer' style='display:none;position:absolute;border:1px solid black'/>");
+			_viewer.center(true);
+			$(document.body).append(_viewer);
+		}
+		
+		function InitGreeting() {
+			_greeting = $("<div class='greeting' id='greeting' style='display:none;z-index:-10'>Happy Birthday Sarah!</div>"); 
+			
+			_elephant = $("<img src='elephant.png' alt='birthday elephant' style='position:absolute;display:none' />");
+			_elephant.center();
+			_elephant.click(function() {
+				var eleposition = _elephant.position();
+				_awyeah.css('left', eleposition.left - 40);
+				_awyeah.css('top', eleposition.top + 100);
+				_awyeah.fadeIn(1000);
+			});
+			$(document.body).append(_elephant);
+			
+			_awyeah = $("<img src='awyeah.png' alt='aw yeah' style='position:absolute;display:none' />");
+			$(document.body).append(_awyeah);
+			
+			_greeting.css({ width: 850, height: 120 });
+			_greeting.center(true);
+			
+			$(document.body).append(_greeting);
+			
+			$("#greeting").FontEffect({
+				// the shadow does not work well in IE
+				shadow: !jQuery.browser.msie, 
+				outline: true,
+				shadowOffsetTop: 10,
+				shadowOffSetLeft: 10,
+				shadowColor: "#000"
+			});
+		}
+		
+		function InitLove() {
+			_love = $("<div class='love' style='display:none;position:absolute;z-index:1000'>"
+				+ "<img src='heart.png' alt='heart' align='center' style='width:24px;height:36px' />, Matt</div>");
+			$(document.body).append(_love);
+			setTimeout(ShowTheLove, 15000);
+		}
+	
+		function ShowTheLove() {
+			var left = $(window).width() - 100;
+			var top = $(window).height() - 50;
+			_love.css('left', left);
+			_love.css('top', top);
+			_love.fadeIn("slow");
+		}
+		
+		function ShowIE6Message() {
+			var msg = $("<div id='iemsg'><h2>Your browser is old :(</h2>You are using a very old version of Internet Explorer. This site will not work correctly with it. Please upgrade to <a href='http://www.microsoft.com/windows/Internet-explorer/default.aspx'>Internet Explorer 8</a> or use <a href='http://www.getfirefox.com'>Firefox</a>, <a href='http://www.google.com/chrome'>Chrome</a>, "
+				+ "<a href='http://www.opera.com'>Opera</a> or <a href='http://www.apple.com/safari'>Safari</a></div>");
+				
+			$(document.body).append(msg);
+			msg.center(true);
+		}
+		
+		function InitCopyright() {
+			var cr = $("<div style='position:absolute;font-size:.5em;font-family:sans-serif;color:#7aa0dd'>by Matt Greer</div>");
+			var left = 10;
+			var top = $(window).height() - 30;
+			cr.css('left', left);
+			cr.css('top', top);
+			$(document.body).append(cr);
+		}
+		
+		$(document).ready(function() {	
+			if($.browser.msie && $.browser.version == "6.0") {
+				ShowIE6Message();
+			} else {
+				if($.browser.msie) {
+					$(document).konami(OnKonamiCode);
+				} else {
+					$(window).konami(OnKonamiCode);
+				}
+				
+				InitPresents();
+				InitViewer();
+				InitGreeting();
+				InitLove();
+				InitCopyright();
+		
+				ShowGreeting(6000);
+		
+				setTimeout(initsnow, 5000);
+			}
+		});
+		
+		$(window).resize(function() {
+			location.href = location.href;
+		});	
+	</script>
+	<link rel="image_src" href="http://www.happybirthdaytosarah.com/elephant.png"  />
+</head>
+<body>
+	<noscript>You need to turn Javascript on!</noscript>
+	<img src="elephant.png" alt="happy birthday elephant for facebook" style="display:none" />
+</body>
+</html>
+
